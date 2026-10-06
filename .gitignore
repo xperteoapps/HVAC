@@ -9,3 +9,8 @@ supabase/.temp
 supabase/.branches
 .DS_Store
 coverage
+supabase/functions/.env
+supabase/functions/.env.local
+e2e/.env.e2e.json
+test-results/
+playwright-report/

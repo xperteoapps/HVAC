@@ -72,6 +72,11 @@ Format: Kontekst / Decyzja / Konsekwencje, ok. 5 linijek. Każda istotna decyzja
 **Decyzja:** Provider `imoje` przez link płatności REST (`POST /merchant/{merchantId}/payment`) tworzony w `create-order`; notyfikacje do `payment-webhook` z weryfikacją `hash(rawBody + serviceKey)`; ponowienie przez `create-payment`. Lista aktywnych dostawców sterowana sekretem `PAYMENT_PROVIDERS` i zwracana przez `calc-shipping`. Przy awarii API zamówienie zostaje z opcją przelewu (fallback `manual`).
 **Konsekwencje:** `manual` i płatność odroczona bez zmian; zwroty z admina i widget kartowy poza MVP; szczegóły i konfiguracja w `docs/payments-imoje.md`.
 
+## ADR-015 — Testy e2e na pełnym lokalnym Supabase
+**Kontekst:** DoD wymaga działania end-to-end (katalog → checkout → zamówienie → admin), RLS i mobile 375 px; testy jednostkowe nie łapią błędów integracji formularzy, Edge Functions i bazy.
+**Decyzja:** Playwright (`e2e/`) na `npx supabase start` + Vite dev; obrazy z Docker Hub (`SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`), Edge Runtime odtwarzany z zaufanym CA za proxy TLS (`scripts/edge-runtime-with-ca.sh`), bramka imoje jako atrapa w sieci Dockera + podpisane notyfikacje z testu.
+**Konsekwencje:** Testy wymagają Dockera (nie są częścią `npm run test`); pierwsze uruchomienie wykryło 2 realne błędy (blokada checkoutu przez walidację ukrytego adresu do faktury, poziomy scroll karty produktu na 375 px).
+
 ---
 
 ## Otwarte pytania (TODO(ustalić))

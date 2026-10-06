@@ -63,6 +63,7 @@ npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/integr
 npx supabase functions serve    # edge functions lokalnie
 npx supabase functions deploy sync-supplier
 npm run test                    # vitest
+npm run test:e2e                # Playwright na lokalnym Supabase (e2e/README.md)
 npm run lint && npm run typecheck
 ```
 

@@ -15,6 +15,7 @@ cp .env.example .env            # uzupełnij VITE_SUPABASE_URL i VITE_SUPABASE_P
 npm i
 npm run dev                     # http://localhost:8080
 npm run lint && npm run typecheck && npm run test
+npm run test:e2e                # Playwright na lokalnym Supabase — patrz e2e/README.md
 ```
 
 ### Baza danych (projekt Supabase)
