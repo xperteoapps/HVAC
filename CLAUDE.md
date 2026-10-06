@@ -11,7 +11,7 @@
 - **Stack:** Lovable (React + Vite + TypeScript + Tailwind + shadcn/ui) + Supabase (Postgres, Auth, Storage, Edge Functions, pg_cron).
 - **Model danych:** jeden katalog produktów, N źródeł (hurtownie) → `supplier_offers` → agregacja do `products` z wyliczoną ceną i stanem.
 - **Hurtownie:** Igłocar, Autoklima, KAISAI, Termosilesia, Sinclair — każda jako **adapter** w `supabase/functions/sync-supplier/adapters/*.ts`. Format feedu (API / XML / CSV / FTP) ustalany per hurtownia (sekcja 6).
-- **Płatności:** `PaymentProvider` abstrakcja + prowider `manual` (przelew tradycyjny / proforma). Przelewy24 / PayU / Tpay / Stripe — **do ustalenia później**, nie implementuj teraz, ale zostaw interfejs.
+- **Płatności:** `PaymentProvider` abstrakcja + providery `manual` (przelew tradycyjny / proforma, odroczona B2B) i **`imoje`** (ING — BLIK, karty, pbl; decyzja klienta, ADR-014, `docs/payments-imoje.md`). P24 / PayU / Tpay / Stripe — nie implementuj.
 - **Dwa tryby cen:** B2C (brutto, detaliczne) i B2B (netto, rabaty grupowe, płatność odroczona — flaga, bez logiki kredytowej na start).
 - **Zasada nadrzędna:** sklep ma działać end-to-end (katalog → koszyk → checkout → zamówienie → panel admina) **zanim** zaczniemy dopieszczać integracje. Najpierw mock adapter, potem prawdziwe feedy.
 
@@ -33,7 +33,7 @@
 |---|---|
 | Frontend | React 18 + Vite + TypeScript, Tailwind, shadcn/ui, React Router, TanStack Query, react-hook-form + zod |
 | Backend | Supabase: Postgres + RLS, Auth (email+hasło, magic link), Storage (zdjęcia produktów), Edge Functions (Deno), pg_cron + pg_net |
-| Integracje | Edge Functions `sync-supplier`, `calc-shipping`, `create-order`, `payment-webhook` |
+| Integracje | Edge Functions `sync-supplier`, `calc-shipping`, `create-order`, `create-payment`, `payment-webhook` (imoje), `sitemap` |
 | E-mail transakcyjny | Resend (przez Edge Function; klucz w secrets) |
 | Faktury | Fakturownia API (faza 3, opcjonalnie) |
 | Hosting | Lovable publish + własna domena klienta |
@@ -74,7 +74,8 @@ SUPPLIER_AUTOKLIMA_*
 SUPPLIER_KAISAI_*
 SUPPLIER_TERMOSILESIA_*
 SUPPLIER_SINCLAIR_*
-PAYMENT_PROVIDER=manual # później: p24 | payu | tpay | stripe
+PAYMENT_PROVIDERS=manual,imoje
+IMOJE_MERCHANT_ID / IMOJE_SERVICE_ID / IMOJE_SERVICE_KEY / IMOJE_API_KEY / IMOJE_ENV=sandbox|production
 FAKTUROWNIA_API_TOKEN   # faza 3
 ```
 
@@ -126,7 +127,8 @@ FAKTUROWNIA_API_TOKEN   # faza 3
 │       │   └── normalize.ts      # mapowanie kategorii/parametrów na nasz słownik
 │       ├── calc-shipping/
 │       ├── create-order/
-│       ├── payment-webhook/      # placeholder, zwraca 501
+│       ├── create-payment/       # ponowny link płatności imoje
+│       ├── payment-webhook/      # notyfikacje imoje (podpis, statusy)
 │       └── send-email/
 └── tests/
 ```
@@ -306,19 +308,20 @@ Pytania do wysłania do każdej hurtowni (wklej do maila):
 
 ---
 
-## 7. Płatności (do ustalenia — nie implementuj dostawców)
+## 7. Płatności — decyzja: imoje (ING)
 
 ```ts
 // src/lib/payments/types.ts
 export interface PaymentProvider {
-  code: 'manual' | 'p24' | 'payu' | 'tpay' | 'stripe';
+  code: 'manual' | 'imoje' | 'p24' | 'payu' | 'tpay' | 'stripe';
   createPayment(order: Order): Promise<{ redirectUrl?: string; instructions?: string }>;
   handleWebhook(req: Request): Promise<{ orderId: string; status: 'paid' | 'failed' | 'pending' }>;
 }
 ```
-- Na start tylko `manual`: zamówienie dostaje status `awaiting_payment`, e-mail z numerem konta i tytułem przelewu = numer zamówienia; admin ręcznie oznacza `paid`.
+- `manual`: zamówienie `awaiting_payment`, e-mail z numerem konta i tytułem przelewu = numer zamówienia; admin ręcznie oznacza `paid`.
 - B2B z `deferred_payment_allowed`: provider `manual`, `payment_due_date = +14 dni`, status `processing` od razu.
-- `payment-webhook` Edge Function istnieje, zwraca `501 Not Implemented` z komentarzem. Decyzja o dostawcy: **otwarta**.
+- **`imoje`** (klient wybrał imoje): `create-order` tworzy link płatności (REST `POST /merchant/{merchantId}/payment`) i zwraca `redirectUrl`; `payment-webhook` weryfikuje notyfikacje (`X-Imoje-Signature`, `hash(rawBody + serviceKey)`) i ustawia `paid` / `failed` / `refunded`; `create-payment` generuje ponowny link. Włączane sekretem `PAYMENT_PROVIDERS=manual,imoje` + `IMOJE_*`. Szczegóły: `docs/payments-imoje.md`.
+- P24 / PayU / Tpay / Stripe — nie implementować.
 
 ---
 
@@ -358,7 +361,7 @@ export interface PaymentProvider {
 17. Harmonogram pg_cron.
 
 ### Faza 4 — Do ustalenia
-18. Płatności online. 19. Fakturownia. 20. Allegro/Ceneo. 21. Konfigurator doboru.
+18. ~~Płatności online~~ (imoje — zrobione). 19. Fakturownia. 20. Allegro/Ceneo. 21. Konfigurator doboru.
 
 ---
 
@@ -374,7 +377,7 @@ export interface PaymentProvider {
 ---
 
 ## 11. Czego NIE robić
-- Nie implementuj bramek płatności ani API kurierów przed decyzją.
+- Nie implementuj innych bramek płatności niż imoje ani API kurierów bez decyzji.
 - Nie twórz własnego systemu auth — Supabase Auth.
 - Nie przechowuj cen jako float, nie licz VAT na froncie (źródło prawdy: DB / `create-order`).
 - Nie ładuj całego feedu hurtowni do pamięci przeglądarki ani do React Query — sync tylko po stronie Edge Functions.

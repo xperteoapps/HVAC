@@ -1,10 +1,10 @@
 /**
  * Abstrakcja dostawcy płatności (front).
- * Na start tylko `manual` (przelew tradycyjny / proforma).
- * Przelewy24 / PayU / Tpay / Stripe — TODO(ustalić): decyzja o dostawcy otwarta.
+ * `manual` (przelew tradycyjny / proforma, płatność odroczona B2B) oraz `imoje` (ING — BLIK, karty, pbl).
+ * Decyzja klienta: bramka online = imoje. p24 / payu / tpay / stripe — nieużywane.
  * Serwerowa implementacja: supabase/functions/_shared/payments/.
  */
-export type PaymentProviderCode = "manual" | "p24" | "payu" | "tpay" | "stripe";
+export type PaymentProviderCode = "manual" | "imoje" | "p24" | "payu" | "tpay" | "stripe";
 
 export interface PaymentOrderSummary {
   id: string;

@@ -36,7 +36,7 @@ const checkoutSchema = z
     invoice_requested: z.boolean().default(false),
     nip: nipSchema.optional().or(z.literal("")),
     shipping_method_code: z.string().min(1, "Wybierz metodę dostawy"),
-    payment: z.enum(["manual", "deferred"]),
+    payment: z.enum(["manual", "imoje", "deferred"]),
     notes: z.string().max(1000).optional().or(z.literal("")),
     terms: z.literal(true, { errorMap: () => ({ message: "Akceptacja regulaminu jest wymagana" }) }),
     privacy: z.literal(true, { errorMap: () => ({ message: "Zgoda jest wymagana" }) }),
@@ -128,6 +128,15 @@ export default function Checkout() {
   const invoiceRequested = watch("invoice_requested");
   const payment = watch("payment") as PaymentChoice;
   const deferredAllowed = Boolean(isB2B && profile?.deferred_payment_allowed);
+  const enabledProviders = shipping?.payment_providers ?? ["manual"];
+
+  // Domyślnie płatność online, jeśli bramka jest włączona
+  useEffect(() => {
+    if (enabledProviders.includes("imoje") && payment === "manual" && !form.formState.dirtyFields.payment) {
+      setValue("payment", "imoje");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledProviders.join(",")]);
 
   if (items.length === 0) {
     return (
@@ -146,7 +155,7 @@ export default function Checkout() {
         invoice_requested: values.invoice_requested,
         nip: values.nip || undefined,
         shipping_method_code: values.shipping_method_code,
-        payment_provider: "manual" as const,
+        payment_provider: values.payment === "imoje" ? ("imoje" as const) : ("manual" as const),
         deferred_payment: values.payment === "deferred",
         notes: values.notes || undefined,
         consents: { terms: true as const, privacy: true as const, marketing: values.marketing },
@@ -161,6 +170,12 @@ export default function Checkout() {
         /* ignore */
       }
       clearCart();
+      if (data.payment?.warning) toast.warning(data.payment.warning);
+      if (data.payment?.redirectUrl) {
+        // Przekierowanie do bramki imoje; po płatności wracamy na stronę potwierdzenia.
+        window.location.assign(data.payment.redirectUrl);
+        return;
+      }
       navigate(`/zamowienie/potwierdzenie/${encodeURIComponent(data.order.number)}`, { state: data });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się złożyć zamówienia");
@@ -218,7 +233,7 @@ export default function Checkout() {
           </Section>
 
           <Section step={4} title="Płatność">
-            <PaymentSelector value={payment} onChange={(v) => setValue("payment", v)} deferredAllowed={deferredAllowed} />
+            <PaymentSelector value={payment} onChange={(v) => setValue("payment", v, { shouldDirty: true })} deferredAllowed={deferredAllowed} enabledProviders={enabledProviders} />
           </Section>
 
           <Section step={5} title="Uwagi i zgody">
@@ -250,7 +265,7 @@ export default function Checkout() {
           <OrderReview shipping={selectedShipping} />
           <Button type="submit" variant="accent" size="lg" className="mt-4 w-full" disabled={submitting || !shipping}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Zamawiam i płacę
+            {payment === "imoje" ? "Zamawiam i przechodzę do płatności" : "Zamawiam i płacę"}
           </Button>
           <p className="mt-2 text-center text-xs text-muted-foreground">Złożenie zamówienia wiąże się z obowiązkiem zapłaty.</p>
         </aside>

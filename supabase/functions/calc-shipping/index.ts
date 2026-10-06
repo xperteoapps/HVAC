@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { errorToResponse, handleOptions, HttpError, jsonResponse, readJson } from "../_shared/cors.ts";
+import { enabledPaymentProviders } from "../_shared/payments/imoje.ts";
 import { assertNoError, createAdminClient, getCaller } from "../_shared/supabase.ts";
 import { lineTotals, unitNetAfterDiscount } from "../_shared/pricing.ts";
 import {
@@ -114,6 +115,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({
       price_mode: priceMode,
       discount_pct: discountPct,
+      payment_providers: enabledPaymentProviders(),
       needsPallet: result.needsPallet,
       totalWeightKg: result.totalWeightKg,
       options: result.options,

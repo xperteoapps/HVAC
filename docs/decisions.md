@@ -67,12 +67,17 @@ Format: Kontekst / Decyzja / Konsekwencje, ok. 5 linijek. Każda istotna decyzja
 **Decyzja:** Repo zbudowane od zera w układzie, który Lovable rozpoznaje i może przejąć: Vite + React 18 + TypeScript + Tailwind 3 + shadcn/ui (`components.json`), `src/integrations/supabase/`, `supabase/` z migracjami i funkcjami, skrypty `dev/build/build:dev/preview/lint`.
 **Konsekwencje:** Lovable może commitować UI na `main` bez konfliktów strukturalnych; obowiązuje `git pull` przed pracą; część konwencji Lovable (np. generowany `types.ts`) utrzymujemy ręcznie do czasu podpięcia projektu.
 
+## ADR-014 — Bramka płatności online: imoje (ING)
+**Kontekst:** CLAUDE.md zostawiał wybór bramki (P24 / PayU / Tpay / Stripe) do decyzji klienta; klient wskazał imoje.
+**Decyzja:** Provider `imoje` przez link płatności REST (`POST /merchant/{merchantId}/payment`) tworzony w `create-order`; notyfikacje do `payment-webhook` z weryfikacją `hash(rawBody + serviceKey)`; ponowienie przez `create-payment`. Lista aktywnych dostawców sterowana sekretem `PAYMENT_PROVIDERS` i zwracana przez `calc-shipping`. Przy awarii API zamówienie zostaje z opcją przelewu (fallback `manual`).
+**Konsekwencje:** `manual` i płatność odroczona bez zmian; zwroty z admina i widget kartowy poza MVP; szczegóły i konfiguracja w `docs/payments-imoje.md`.
+
 ---
 
 ## Otwarte pytania (TODO(ustalić))
 
 1. **Branding** — nazwa sklepu (`SHOP_NAME`), logo, paleta (obecnie neutralna: `#0F172A` / `#0EA5E9` / `#F8FAFC`), domena.
-2. **Dostawca płatności online** — Przelewy24 / PayU / Tpay / Stripe; do tego czasu tylko `manual`.
+2. **imoje** — dane dostępowe (merchantId, serviceId, serviceKey, token API) do sandboxa i produkcji; decyzja o dostawcy podjęta (ADR-014).
 3. **Formaty feedów 5 hurtowni** — Igłocar, Autoklima, KAISAI, Termosilesia, Sinclair: format, auth, dostępy testowe (pytania w `docs/suppliers/*.md`).
 4. **Dane sprzedawcy** — pełna nazwa firmy, adres, NIP, KRS/CEIDG, kontakt do regulaminu, polityki prywatności i stopki.
 5. **Numer konta bankowego** (`BANK_ACCOUNT_NUMBER`) do instrukcji przelewu.

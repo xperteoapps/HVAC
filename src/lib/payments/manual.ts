@@ -1,4 +1,5 @@
 import type { PaymentProvider } from "./types";
+import { imojeProvider } from "./imoje";
 
 export const manualProvider: PaymentProvider = {
   code: "manual",
@@ -24,7 +25,4 @@ export const deferredProvider: PaymentProvider = {
   },
 };
 
-export const PAYMENT_PROVIDERS: PaymentProvider[] = [
-  manualProvider,
-  // TODO(ustalić): p24 / payu / tpay / stripe — po decyzji klienta
-];
+export const PAYMENT_PROVIDERS: PaymentProvider[] = [imojeProvider, manualProvider];

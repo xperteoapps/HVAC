@@ -11,7 +11,8 @@ import {
   type ShippingItemInput,
   type ShippingMethodRow,
 } from "../_shared/shipping.ts";
-import { getPaymentProvider } from "../_shared/payments/types.ts";
+import { getPaymentProvider, PaymentProviderNotSupportedError } from "../_shared/payments/types.ts";
+import { createImojePaymentLink, isImojeConfigured } from "../_shared/payments/imoje.ts";
 import {
   type EmailOrder,
   type EmailOrderItem,
@@ -58,7 +59,7 @@ const bodySchema = z.object({
   invoice_requested: z.boolean(),
   nip: z.string().trim().max(20).optional(),
   shipping_method_code: z.string().trim().min(1, "Wybierz metodę dostawy."),
-  payment_provider: z.literal("manual"),
+  payment_provider: z.enum(["manual", "imoje"]).default("manual"),
   deferred_payment: z.boolean().default(false),
   notes: z.string().trim().max(2000).optional(),
   consents: z.object({
@@ -271,6 +272,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // --- Status / płatność --------------------------------------------------------
     const deferred = body.deferred_payment;
+    // Płatność odroczona zawsze przez `manual`; imoje tylko gdy skonfigurowane (inaczej fallback na przelew).
+    let paymentProvider: "manual" | "imoje" = deferred ? "manual" : body.payment_provider;
+    if (paymentProvider === "imoje" && !isImojeConfigured()) {
+      console.warn("[create-order] wybrano imoje, ale IMOJE_* nie są skonfigurowane — fallback na manual.");
+      paymentProvider = "manual";
+    }
     const status = deferred ? "processing" : "awaiting_payment";
     const paymentStatus = deferred ? "deferred" : "pending";
     const paymentDueDate = deferred ? isoDatePlusDays(DEFERRED_PAYMENT_DAYS) : null;
@@ -297,7 +304,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         billing_address: body.billing_address ?? null,
         invoice_requested: body.invoice_requested,
         nip: nip ?? null,
-        payment_provider: body.payment_provider,
+        payment_provider: paymentProvider,
         payment_status: paymentStatus,
         payment_due_date: paymentDueDate,
         notes: body.notes ?? null,
@@ -364,16 +371,51 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // --- Instrukcja płatności -----------------------------------------------------
-    const provider = getPaymentProvider(body.payment_provider);
-    const payment = await provider.createPayment({
+    // --- Płatność: link imoje (z fallbackiem na przelew) lub instrukcje przelewu ----
+    const orderRef = {
       id: order.id,
       number: order.number,
       email: order.email,
       total_gross_cents: order.total_gross_cents,
       payment_status: order.payment_status,
       payment_due_date: order.payment_due_date,
-    });
+      customer_name: body.customer.full_name,
+      customer_phone: body.customer.phone,
+    };
+    let providerCode: "manual" | "imoje" = paymentProvider;
+    let redirectUrl: string | null = null;
+    let paymentWarning: string | null = null;
+    if (providerCode === "imoje") {
+      try {
+        const link = await createImojePaymentLink(orderRef, { fullName: body.customer.full_name, phone: body.customer.phone });
+        redirectUrl = link.redirectUrl ?? null;
+        const { error: evErr } = await admin.from("order_events").insert({
+          order_id: order.id,
+          type: "payment_link",
+          payload: { provider: "imoje", payment_id: link.paymentId, url: link.redirectUrl },
+        });
+        if (evErr) console.warn("[create-order] order_events.insert:", evErr.message);
+      } catch (e) {
+        // Bramka niedostępna — zamówienie zostaje, klient dostaje dane do przelewu i może zapłacić online później.
+        console.error("[create-order] imoje createPayment:", e instanceof Error ? e.message : e);
+        providerCode = "manual";
+        paymentWarning = "Płatność online jest chwilowo niedostępna. Możesz opłacić zamówienie przelewem lub spróbować ponownie z poziomu konta.";
+        const { error: upErr } = await admin.from("orders").update({ payment_provider: "manual" }).eq("id", order.id);
+        if (upErr) console.warn("[create-order] orders.update provider fallback:", upErr.message);
+      }
+    }
+    let provider;
+    try {
+      provider = getPaymentProvider(providerCode);
+    } catch (e) {
+      if (!(e instanceof PaymentProviderNotSupportedError)) throw e;
+      provider = getPaymentProvider("manual");
+    }
+    // Instrukcje przelewu dołączamy zawsze (dla imoje jako alternatywa w e-mailu).
+    const manualInstructions = (await getPaymentProvider("manual").createPayment(orderRef)).instructions;
+    const payment = providerCode === "imoje"
+      ? { redirectUrl: redirectUrl ?? undefined, instructions: manualInstructions }
+      : await provider.createPayment(orderRef);
 
     // --- E-maile (best effort) ------------------------------------------------------
     const emailOrder: EmailOrder = {
@@ -458,7 +500,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         price_net_cents: i.price_net_cents,
         vat_rate: i.vat_rate,
       })),
-      payment: { provider: provider.code, instructions: payment.instructions ?? null },
+      payment: {
+        provider: provider.code,
+        instructions: payment.instructions ?? null,
+        redirectUrl: payment.redirectUrl ?? null,
+        warning: paymentWarning,
+      },
     }, 201);
   } catch (err) {
     return errorToResponse(err, "create-order");

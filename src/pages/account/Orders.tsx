@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Truck } from "lucide-react";
+import { ArrowLeft, CreditCard, Loader2, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +11,8 @@ import { useMyOrders, useOrderDetails } from "@/hooks/useOrders";
 import { formatDate, formatPrice, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/formatters";
 import { grossCents, toNumber } from "@/lib/pricing";
 import { asAddress } from "@/types";
+import { startOnlinePayment } from "@/lib/payments/pay-online";
+import { toast } from "@/components/ui/sonner";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "accent" | "success" | "warning" | "destructive" | "outline"> = {
   new: "secondary",
@@ -66,6 +69,17 @@ export function OrdersList() {
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading } = useOrderDetails(id);
+  const [paying, setPaying] = useState(false);
+  const payOnline = async () => {
+    if (!id) return;
+    setPaying(true);
+    try {
+      await startOnlinePayment({ order_id: id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się uruchomić płatności");
+      setPaying(false);
+    }
+  };
   if (isLoading) return <Skeleton className="h-64" />;
   if (!data?.order) return <EmptyState title="Nie znaleziono zamówienia" action={<Button asChild><Link to="/konto/zamowienia">Wróć</Link></Button>} />;
   const { order, items, events } = data;
@@ -107,8 +121,15 @@ export function OrderDetail() {
         <div className="rounded-md border bg-card p-4 text-sm">
           <h3 className="mb-2 font-semibold">Płatność</h3>
           <p>{PAYMENT_STATUS_LABELS[order.payment_status] ?? order.payment_status}</p>
-          <p className="text-muted-foreground">Przelew tradycyjny, tytuł: {order.number}</p>
+          <p className="text-muted-foreground">
+            {order.payment_provider === "imoje" ? "Płatność online (imoje)" : "Przelew tradycyjny"}, tytuł: {order.number}
+          </p>
           {order.payment_due_date && <p>Termin: {formatDate(order.payment_due_date)}</p>}
+          {(order.payment_status === "pending" || order.payment_status === "failed") && ["new", "awaiting_payment"].includes(order.status) && (
+            <Button size="sm" variant="accent" className="mt-3" onClick={payOnline} disabled={paying}>
+              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Zapłać online
+            </Button>
+          )}
         </div>
       </div>
 
@@ -200,6 +221,10 @@ function describeEvent(type: string, payload: unknown): string {
       return `Nadano przesyłkę ${p.carrier ?? ""} ${p.tracking_number ?? ""}`.trim();
     case "email_sent":
       return "Wysłano e-mail z potwierdzeniem";
+    case "payment_link":
+      return "Wygenerowano link do płatności online";
+    case "payment_notification":
+      return `Bramka płatności: ${p.status ?? ""}${p.payment_method ? ` (${p.payment_method})` : ""}`;
     case "note":
       return p.text ? `Notatka: ${p.text}` : "Notatka";
     default:

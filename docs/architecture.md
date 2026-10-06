@@ -189,7 +189,7 @@ Uwagi:
 - Frontend wysyła tylko `product_id` + `qty`. Ceny, VAT i rabat liczy wyłącznie `create-order` na podstawie DB.
 - Nie ma polityki RLS INSERT na `orders` dla klientów — zamówienie może utworzyć tylko `service_role` (patrz `docs/rls.md`).
 - Gość nie ma dostępu do swojego zamówienia w DB; dane potwierdzenia pochodzą z odpowiedzi funkcji.
-- `payment-webhook` zwraca `501 Not Implemented` — dostawca płatności online nieustalony.
+- `payment-webhook` obsługuje notyfikacje imoje (podpis `hash(rawBody + serviceKey)`, mapowanie statusów) — patrz `docs/payments-imoje.md`; `create-payment` generuje ponowny link płatności.
 
 ## 6. Harmonogram pg_cron (`20261006000003_cron.sql`)
 
@@ -240,7 +240,8 @@ select vault.create_secret('<service_role_key>', 'service_role_key');
 | `SHOP_NAME` | e-maile, potwierdzenia | nazwa sklepu (branding klienta — `TODO(ustalić)`) |
 | `SHOP_URL` | e-maile (linki do zamówienia, strony statyczne) | publiczny URL sklepu |
 | `BANK_ACCOUNT_NUMBER` | `create-order` (provider `manual`) | numer rachunku do przelewu w instrukcji płatności — `TODO(ustalić)` |
-| `PAYMENT_PROVIDER` | `create-order`, `payment-webhook` | `manual` (później: `p24` / `payu` / `tpay` / `stripe`) |
+| `PAYMENT_PROVIDERS` | `calc-shipping`, `create-order` | włączeni dostawcy, np. `manual,imoje` (domyślnie `manual`) |
+| `IMOJE_MERCHANT_ID`, `IMOJE_SERVICE_ID`, `IMOJE_SERVICE_KEY`, `IMOJE_API_KEY`, `IMOJE_ENV`, `IMOJE_API_URL` | `create-order`, `create-payment`, `payment-webhook` | konfiguracja imoje (`docs/payments-imoje.md`) |
 | `SUPPLIER_IGLOCAR_URL` / `_LOGIN` / `_PASSWORD` / `_FORMAT` | `sync-supplier` | dostęp do feedu — `TODO(ustalić)` |
 | `SUPPLIER_AUTOKLIMA_*` | `sync-supplier` | j.w. |
 | `SUPPLIER_KAISAI_*` | `sync-supplier` | j.w. |

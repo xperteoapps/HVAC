@@ -6,7 +6,7 @@ Dedykowany sklep internetowy dla branży HVAC (klimatyzacja, pompy ciepła, went
 
 - **Front:** React 18 + Vite + TypeScript (strict) + Tailwind + shadcn/ui + React Router + TanStack Query + zustand + react-hook-form/zod
 - **Backend:** Supabase — Postgres (RLS), Auth, Edge Functions (Deno), pg_cron
-- **Integracje:** `sync-supplier` (adaptery hurtowni), `calc-shipping`, `create-order`, `send-email` (Resend), `payment-webhook` (placeholder 501)
+- **Integracje:** `sync-supplier` (adaptery hurtowni), `calc-shipping`, `create-order`, `send-email` (Resend), `payment-webhook` + `create-payment` (imoje — BLIK/karty/pbl), `sitemap`
 
 ## Szybki start
 
@@ -23,11 +23,11 @@ npm run lint && npm run typecheck && npm run test
 npx supabase link --project-ref <ref>
 npx supabase db push                                   # migracje z supabase/migrations
 psql "$SUPABASE_DB_URL" -f supabase/seed.sql           # kategorie, atrybuty, dostawa, 39 produktów demo
-npx supabase functions deploy sync-supplier calc-shipping create-order send-email payment-webhook
+npx supabase functions deploy sync-supplier calc-shipping create-order create-payment send-email payment-webhook sitemap
 npm run db:types                                       # regeneracja src/integrations/supabase/types.ts
 ```
 
-Sekrety Edge Functions (Dashboard → Edge Functions → Secrets): `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_EMAIL`, `SHOP_NAME`, `SHOP_URL`, `BANK_ACCOUNT_NUMBER`, `SUPPLIER_<CODE>_URL/_LOGIN/_PASSWORD/_FORMAT`.
+Sekrety Edge Functions (Dashboard → Edge Functions → Secrets): `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_EMAIL`, `SHOP_NAME`, `SHOP_URL`, `BANK_ACCOUNT_NUMBER`, `PAYMENT_PROVIDERS=manual,imoje`, `IMOJE_*` (patrz `docs/payments-imoje.md`), `SUPPLIER_<CODE>_URL/_LOGIN/_PASSWORD/_FORMAT`.
 
 Pierwszy admin: po rejestracji ustaw w SQL `update profiles set role = 'admin' where email = '...'`.
 
@@ -59,4 +59,4 @@ Zgodna z sekcją 3 CLAUDE.md: `src/pages`, `src/components/{layout,catalog,produ
 
 ## Otwarte kwestie (TODO(ustalić))
 
-Branding klienta, dostawca płatności online, formaty feedów 5 hurtowni i dane dostępowe, dane sprzedawcy (regulamin, stopka), numer konta, domena nadawcy e-mail. Lista w `docs/decisions.md`.
+Branding klienta, dane dostępowe imoje (sandbox/produkcja), formaty feedów 5 hurtowni i dane dostępowe, dane sprzedawcy (regulamin, stopka), numer konta, domena nadawcy e-mail. Lista w `docs/decisions.md`.

@@ -94,6 +94,8 @@ export interface ShippingCalcResult {
   options: ShippingOption[];
   subtotal_net_cents: number;
   subtotal_gross_cents: number;
+  /** Dostawcy płatności włączeni po stronie serwera, np. ['manual','imoje'] */
+  payment_providers?: string[];
 }
 
 export interface AddressJson {
@@ -126,7 +128,7 @@ export interface CreatedOrder {
     created_at: string;
   };
   items: Array<{ sku: string; name: string; qty: number; price_net_cents: number; vat_rate: number }>;
-  payment: { instructions?: string; redirectUrl?: string };
+  payment: { provider?: string; instructions?: string | null; redirectUrl?: string | null; warning?: string | null };
 }
 
 export function asAttributes(json: Json | null | undefined): ProductAttributes {

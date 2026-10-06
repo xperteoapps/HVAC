@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { CheckCircle2, Landmark } from "lucide-react";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { CheckCircle2, CreditCard, Landmark, Loader2, XCircle } from "lucide-react";
 import { Seo } from "@/components/common/Seo";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatDate, ORDER_STATUS_LABELS } from "@/lib/formatters";
+import { startOnlinePayment } from "@/lib/payments/pay-online";
+import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import type { CreatedOrder } from "@/types";
 import { ORDER_CONFIRM_KEY } from "./Checkout";
@@ -13,7 +15,21 @@ export default function OrderConfirm() {
   const { number } = useParams<{ number: string }>();
   const location = useLocation();
   const { user } = useAuth();
+  const [params] = useSearchParams();
+  const paymentResult = params.get("platnosc"); // ok | blad | powrot (powrót z bramki imoje)
   const [data, setData] = useState<CreatedOrder | null>((location.state as CreatedOrder | null) ?? null);
+  const [paying, setPaying] = useState(false);
+
+  const payOnline = async () => {
+    if (!data) return;
+    setPaying(true);
+    try {
+      await startOnlinePayment({ order_number: data.order.number, email: data.order.email });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się uruchomić płatności");
+      setPaying(false);
+    }
+  };
 
   useEffect(() => {
     if (data) return;
@@ -40,6 +56,7 @@ export default function OrderConfirm() {
 
   const { order, items, payment } = data;
   const deferred = order.payment_status === "deferred";
+  const online = payment.provider === "imoje";
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -57,9 +74,36 @@ export default function OrderConfirm() {
         </p>
       </div>
 
+      {(online || paymentResult) && (
+        <div className="mt-6 rounded-lg border bg-card p-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <CreditCard className="h-5 w-5 text-accent" /> Płatność online
+          </h2>
+          {paymentResult === "ok" ? (
+            <p className="mt-2 flex items-center gap-2 text-sm text-success">
+              <CheckCircle2 className="h-4 w-4" /> Płatność została przyjęta. Status zamówienia zaktualizujemy po potwierdzeniu z bramki (zwykle w ciągu minuty).
+            </p>
+          ) : paymentResult === "blad" ? (
+            <p className="mt-2 flex items-center gap-2 text-sm text-destructive">
+              <XCircle className="h-4 w-4" /> Płatność nie powiodła się lub została przerwana. Możesz spróbować ponownie albo zapłacić przelewem.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {payment.warning ?? "Jeśli nie dokończyłeś płatności, możesz uruchomić ją ponownie poniżej lub zapłacić przelewem."}
+            </p>
+          )}
+          {paymentResult !== "ok" && (
+            <Button className="mt-4" variant="accent" onClick={payOnline} disabled={paying}>
+              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+              {paymentResult === "blad" ? "Spróbuj zapłacić ponownie" : "Zapłać online (BLIK, karta)"}
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="mt-6 rounded-lg border bg-card p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Landmark className="h-5 w-5 text-accent" /> {deferred ? "Płatność odroczona" : "Dane do przelewu"}
+          <Landmark className="h-5 w-5 text-accent" /> {deferred ? "Płatność odroczona" : online ? "Alternatywnie: przelew tradycyjny" : "Dane do przelewu"}
         </h2>
         <p className="mt-2 whitespace-pre-line text-sm">{payment.instructions ?? "Instrukcje płatności znajdziesz w wiadomości e-mail."}</p>
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">

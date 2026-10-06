@@ -1,9 +1,11 @@
 // Abstrakcja dostawcy płatności (CLAUDE.md sekcja 7) — wersja serwerowa.
-// Na start tylko `manual`; p24 / payu / tpay / stripe — TODO(ustalić): decyzja o dostawcy.
+// Zaimplementowane: `manual` (przelew / odroczona) i `imoje` (ING: BLIK, karty, pbl).
+// p24 / payu / tpay / stripe — niezaimplementowane (decyzja: imoje).
 
 import { manualProvider } from "./manual.ts";
+import { imojeProvider, isImojeConfigured } from "./imoje.ts";
 
-export type PaymentProviderCode = "manual" | "p24" | "payu" | "tpay" | "stripe";
+export type PaymentProviderCode = "manual" | "imoje" | "p24" | "payu" | "tpay" | "stripe";
 
 /** Minimalny podzbiór zamówienia potrzebny dostawcy płatności. */
 export interface PaymentOrderRef {
@@ -13,6 +15,8 @@ export interface PaymentOrderRef {
   total_gross_cents: number;
   payment_status: string;
   payment_due_date: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
 }
 
 export interface CreatePaymentResult {
@@ -33,16 +37,20 @@ export interface PaymentProvider {
 
 export class PaymentProviderNotSupportedError extends Error {
   constructor(code: string) {
-    super(`Dostawca płatności nie jest jeszcze obsługiwany (${code}).`);
+    super(`Dostawca płatności nie jest obsługiwany (${code}).`);
     this.name = "PaymentProviderNotSupportedError";
   }
 }
 
 /**
- * Fabryka dostawców. `manual` jest jedynym zaimplementowanym; p24 / payu / tpay / stripe
- * (i każdy nieznany kod) rzucają PaymentProviderNotSupportedError do czasu decyzji o bramce.
+ * Fabryka dostawców. `manual` zawsze; `imoje` tylko gdy skonfigurowane sekrety IMOJE_*.
+ * Pozostałe kody rzucają PaymentProviderNotSupportedError.
  */
 export function getPaymentProvider(code: string): PaymentProvider {
   if (code === "manual") return manualProvider;
+  if (code === "imoje") {
+    if (!isImojeConfigured()) throw new PaymentProviderNotSupportedError("imoje — brak konfiguracji");
+    return imojeProvider;
+  }
   throw new PaymentProviderNotSupportedError(code);
 }
