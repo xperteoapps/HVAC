@@ -76,7 +76,7 @@ export default function Category() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="hidden lg:block">{sidebar}</div>
         <div>
           <SortBar

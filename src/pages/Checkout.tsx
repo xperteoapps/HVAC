@@ -25,6 +25,21 @@ import { addressSchema, emailSchema, nipSchema, phoneSchema } from "@/lib/valida
 import { supabase } from "@/integrations/supabase/client";
 import type { CreatedOrder } from "@/types";
 
+/** Adres do faktury bez reguł — pełna walidacja (addressSchema) tylko gdy zaznaczono „Inne dane do faktury”. */
+const looseAddressSchema = z
+  .object({
+    full_name: z.string(),
+    company_name: z.string(),
+    street: z.string(),
+    building_no: z.string(),
+    apartment_no: z.string(),
+    postal_code: z.string(),
+    city: z.string(),
+    country: z.string(),
+    phone: z.string(),
+  })
+  .partial();
+
 const checkoutSchema = z
   .object({
     email: emailSchema,
@@ -32,7 +47,8 @@ const checkoutSchema = z
     phone: phoneSchema,
     shipping: addressSchema,
     different_billing: z.boolean().default(false),
-    billing: addressSchema,
+    // Walidowany tylko, gdy klient zaznaczy „Inne dane do faktury” (superRefine poniżej)
+    billing: looseAddressSchema.optional(),
     invoice_requested: z.boolean().default(false),
     nip: nipSchema.optional().or(z.literal("")),
     shipping_method_code: z.string().min(1, "Wybierz metodę dostawy"),
@@ -45,6 +61,12 @@ const checkoutSchema = z
   .superRefine((v, ctx) => {
     if (v.invoice_requested && (!v.nip || v.nip.trim() === "")) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nip"], message: "Podaj NIP do faktury" });
+    }
+    if (v.different_billing) {
+      const billing = addressSchema.safeParse(v.billing ?? {});
+      if (!billing.success) {
+        for (const issue of billing.error.issues) ctx.addIssue({ ...issue, path: ["billing", ...issue.path] });
+      }
     }
   });
 
@@ -144,6 +166,12 @@ export default function Checkout() {
     );
   }
 
+  const onInvalid = () => {
+    toast.error("Uzupełnij wymagane pola zamówienia");
+    // Przewiń do pierwszego pola z błędem
+    requestAnimationFrame(() => document.querySelector<HTMLElement>("[role=alert]")?.closest("div")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  };
+
   const onSubmit = async (values: CheckoutValues) => {
     setSubmitting(true);
     try {
@@ -151,7 +179,7 @@ export default function Checkout() {
         items: items.map((i) => ({ product_id: i.product_id, qty: i.qty })),
         customer: { email: values.email, full_name: values.full_name, phone: values.phone },
         shipping_address: clean(values.shipping),
-        billing_address: values.different_billing ? { ...clean(values.billing), nip: values.nip || undefined } : undefined,
+        billing_address: values.different_billing && values.billing ? { ...clean(values.billing), nip: values.nip || undefined } : undefined,
         invoice_requested: values.invoice_requested,
         nip: values.nip || undefined,
         shipping_method_code: values.shipping_method_code,
@@ -188,7 +216,7 @@ export default function Checkout() {
     <div>
       <Seo title="Zamówienie" noindex />
       <PageHeader title="Zamówienie" description={user ? undefined : "Możesz zamówić jako gość lub zalogować się, aby zapisać dane."} actions={!user ? <Button variant="outline" size="sm" asChild><Link to="/logowanie?next=/zamowienie">Zaloguj się</Link></Button> : undefined} />
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-8 lg:grid-cols-[1fr_380px]" noValidate>
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]" noValidate>
         <div className="space-y-8">
           <Section step={1} title="Dane kontaktowe">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -293,7 +321,11 @@ function ConsentRow({ children, error, onChange }: { children: React.ReactNode; 
         <Checkbox className="mt-0.5" onCheckedChange={(v) => onChange(Boolean(v))} />
         <span>{children}</span>
       </label>
-      {error && <p className="ml-6 text-xs text-destructive">{error}</p>}
+      {error && (
+        <p className="ml-6 text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

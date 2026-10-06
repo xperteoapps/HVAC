@@ -29,9 +29,9 @@ export function AddToCart({ product, compact = false, className }: { product: Pr
     <div className={className}>
       <div className="flex items-center gap-3">
         <QtyInput value={qty} onChange={setQty} />
-        <Button size="lg" variant="accent" onClick={add} disabled={disabled} className="flex-1">
+        <Button size="lg" variant="accent" onClick={add} disabled={disabled} className="min-w-0 flex-1 px-4">
           <ShoppingCart className="h-5 w-5" />
-          {disabled ? "Niedostępny" : "Dodaj do koszyka"}
+          <span className="truncate">{disabled ? "Niedostępny" : "Dodaj do koszyka"}</span>
         </Button>
       </div>
     </div>

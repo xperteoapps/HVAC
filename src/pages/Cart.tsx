@@ -29,7 +29,7 @@ export default function Cart() {
           }
         />
       ) : (
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="rounded-lg border bg-card px-4">
             <div className="divide-y">
               {items.map((item) => (

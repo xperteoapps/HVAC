@@ -21,7 +21,7 @@ export default function AccountLayout() {
         <h1 className="text-2xl font-bold sm:text-3xl">Moje konto</h1>
         {isB2B && <Badge variant="accent">B2B · {profile?.customer_group?.name}</Badge>}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="flex gap-1 overflow-x-auto lg:flex-col" aria-label="Konto">
           {NAV.map((n) => (
             <NavLink

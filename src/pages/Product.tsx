@@ -26,7 +26,7 @@ export default function Product() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-8 lg:grid-cols-[1fr_1fr_340px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1fr_340px]">
         <Skeleton className="aspect-square" />
         <div className="space-y-3">
           <Skeleton className="h-8 w-3/4" />
@@ -68,7 +68,7 @@ export default function Product() {
       />
       <Breadcrumbs items={crumbs} />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_340px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_340px]">
         <Gallery images={product.images ?? []} name={product.name} />
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">

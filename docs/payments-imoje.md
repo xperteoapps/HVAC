@@ -31,6 +31,7 @@ Decyzja klienta (ADR-014): bramka płatności online = **imoje** (ING Bank Ślą
 | `IMOJE_API_KEY` | Token autoryzacyjny API (Bearer) |
 | `IMOJE_ENV` | `sandbox` (domyślnie) lub `production` |
 | `IMOJE_API_URL` | opcjonalnie — nadpisanie bazy API, np. `https://api.pay.ing.pl/v1` po migracji domen ING |
+| `IMOJE_NOTIFICATION_URL` | opcjonalnie — adres notyfikacji wysyłany do imoje (domyślnie `${SUPABASE_URL}/functions/v1/payment-webhook`) |
 | `PAYMENT_PROVIDERS` | lista włączonych dostawców, np. `manual,imoje` (domyślnie `manual`) |
 | `SHOP_URL` | publiczny adres sklepu (adresy powrotu) |
 

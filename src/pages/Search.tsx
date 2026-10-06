@@ -41,7 +41,7 @@ export default function Search() {
       <h1 className="text-2xl font-bold sm:text-3xl">{q ? <>Wyniki dla „{q}”</> : "Wyszukiwarka"}</h1>
       {!q && <p className="mt-2 text-sm text-muted-foreground">Wpisz nazwę produktu, model, SKU lub kod EAN w polu wyszukiwania.</p>}
       {q && (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <div className="hidden lg:block">{sidebar}</div>
           <div>
             <SortBar total={data?.total ?? 0} sort={state.sort} view={state.view} onSort={(s) => update({ sort: s })} onView={(v) => update({ view: v }, false)} onOpenFilters={() => setFiltersOpen(true)} activeCount={activeCount} />

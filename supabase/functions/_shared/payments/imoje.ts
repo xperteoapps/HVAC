@@ -48,6 +48,9 @@ function shopUrl(): string {
 }
 
 function notificationUrl(): string | undefined {
+  // Jawne nadpisanie (np. gdy SUPABASE_URL w runtime to adres wewnętrzny, jak lokalnie http://kong:8000)
+  const explicit = Deno.env.get("IMOJE_NOTIFICATION_URL");
+  if (explicit) return explicit;
   const base = Deno.env.get("SUPABASE_URL");
   return base ? `${base.replace(/\/$/, "")}/functions/v1/payment-webhook` : undefined;
 }

@@ -1,11 +1,11 @@
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type { FieldErrors, FieldValues, UseFormRegister } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form";
 import type { AddressFormValues } from "@/lib/validators";
 
 type Prefix = "shipping" | "billing";
 
-interface AddressFormProps<T extends Record<Prefix, AddressFormValues>> {
+interface AddressFormProps<T extends FieldValues> {
   prefix: Prefix;
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
@@ -13,7 +13,7 @@ interface AddressFormProps<T extends Record<Prefix, AddressFormValues>> {
 }
 
 /** Pola adresu PL (imię/nazwisko, firma, ulica, nr, kod, miasto, telefon). */
-export function AddressForm<T extends Record<Prefix, AddressFormValues>>({ prefix, register, errors, showCompany = true }: AddressFormProps<T>) {
+export function AddressForm<T extends FieldValues>({ prefix, register, errors, showCompany = true }: AddressFormProps<T>) {
   // react-hook-form wymaga ścieżek typu Path<T>; przy generycznym prefiksie rzutujemy przez unknown.
   const reg = register as unknown as UseFormRegister<Record<string, unknown>>;
   const err = (errors as unknown as Record<Prefix, Partial<Record<keyof AddressFormValues, { message?: string }>>>)[prefix] ?? {};
