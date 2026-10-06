@@ -1,0 +1,12 @@
+export { Dashboard as AdminDashboard } from "./Dashboard";
+export { Orders as AdminOrders } from "./Orders";
+export { OrderDetails as AdminOrderDetails } from "./OrderDetails";
+export { Products as AdminProducts } from "./Products";
+export { OfferMapping as AdminOfferMapping } from "./OfferMapping";
+export { MarginRules as AdminMarginRules } from "./MarginRules";
+export { Suppliers as AdminSuppliers } from "./Suppliers";
+export { Customers as AdminCustomers } from "./Customers";
+export { Categories as AdminCategories } from "./Categories";
+export { Brands as AdminBrands } from "./Brands";
+export { ShippingMethods as AdminShippingMethods } from "./ShippingMethods";
+export { StaticPages as AdminStaticPages } from "./StaticPages";
