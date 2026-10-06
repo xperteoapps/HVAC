@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Neutralna paleta do czasu dostarczenia brandingu przez klienta:
+   granat #0F172A (primary), akcent #0EA5E9, tło #F8FAFC */
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 199 89% 48%;
+    --radius: 0.5rem;
+  }
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .prose-shop {
+    @apply text-sm leading-relaxed text-foreground;
+  }
+  .prose-shop h2 {
+    @apply mt-6 mb-2 text-lg font-semibold;
+  }
+  .prose-shop h3 {
+    @apply mt-4 mb-2 text-base font-semibold;
+  }
+  .prose-shop p {
+    @apply mb-3;
+  }
+  .prose-shop ul {
+    @apply mb-3 list-disc pl-5;
+  }
+  .prose-shop ol {
+    @apply mb-3 list-decimal pl-5;
+  }
+  .prose-shop a {
+    @apply text-accent underline;
+  }
+  .prose-shop strong {
+    @apply font-semibold;
+  }
+}

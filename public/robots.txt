@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /konto
+Disallow: /koszyk
+Disallow: /zamowienie
+Sitemap: /sitemap.xml

@@ -1,0 +1,23 @@
+# Minimalna konfiguracja Supabase CLI. Brakujące sekcje przyjmują wartości domyślne CLI.
+project_id = "hvac"
+
+# Edge Functions same weryfikują uprawnienia (service role / JWT użytkownika) w _shared/supabase.ts,
+# dlatego wbudowana weryfikacja JWT jest wyłączona (pg_cron woła sync-supplier kluczem service role,
+# a calc-shipping / create-order muszą działać dla gości).
+[functions.calc-shipping]
+verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false
+
+[functions.sync-supplier]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false

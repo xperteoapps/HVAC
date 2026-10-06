@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": [],
+    "paths": {
+      "@supabase/supabase-js": ["../../node_modules/@supabase/supabase-js"],
+      "zod": ["../../node_modules/zod"]
+    }
+  },
+  "files": ["./deno-globals.d.ts"],
+  "include": ["../../supabase/functions/**/*.ts"]
+}
